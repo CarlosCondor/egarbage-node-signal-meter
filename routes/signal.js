@@ -18,27 +18,49 @@ module.exports = function(app) {
   }
 
   var findByDevice = function(deviceid, cb) {
+    
     if (typeof(deviceid)=='number') {
+          
       var query = Measure.find({id_device: deviceid})
                           .select("id_device date -_id +lasttime")
                           .sort({date: -1})
                           .exec(function(err, measures) {
-        if (!err) {
-          console.log("Encontradas "+measures.length+" mueasures del id "+deviceid);
-          cb(measures);
-        }
-        else {
-          cb(null);
-        }
+          if (!err) {
+            console.log("Encontradas "+measures.length+" mueasures del id "+deviceid);
+            cb(measures);
+          } else {
+            cb(null);
+          }
       });
-    }
-    else {
+
+    } else {
       console.log("device id is not integer,  is "+typeof(deviceid));
       return cb(null);
     }
-      
   }
 
+  var findByDeviceDate = function(deviceid, date, cb) {
+    
+    if (typeof(deviceid)=='number' && date instanceof Date) {
+      var query = Measure.find({id_device: deviceid})
+                        .gte('date', date)
+                        .select("id_device date -_id +lasttime")
+                        .sort({date: -1})
+                        .exec(function(err, measures) {
+          if (!err) {
+            console.log("Encontradas "+measures.length+" mueasures del id "+deviceid);
+            cb(measures);
+          } else {
+            cb(null);
+          }
+      });
+
+    } else {
+      console.log("device id is not integer,  is "+typeof(deviceid));
+      return cb(null);
+    }
+  }
+      
   indexMeasures = function(req, res) {
     findAllMeasures(function(measures) {
       // Here is the measures
@@ -85,14 +107,43 @@ module.exports = function(app) {
           res.send("Err:"+err)
         res.send({ count: errors.length, errors: errors});
       })
-
-
     })
   }
   
+  analyzeMeasureSince = function(req, res) {
+    findByDeviceDate(parseInt(req.params.deviceid), new Date(new Date().getTime()-req.params.since*24*60*60000), function(measures) {
+      if (!measures) {
+        res.send("Error al recibir medidas");
+        //return;
+      }
+
+      var lastTime = null;
+      var errors = [];
+      async.forEach(measures, function(item, callback) {
+        if (!lastTime) {
+          lastTime = item.date;
+        } else {
+          // check if date is +10minutes from lastTime
+          if (lastTime.getTime()-item.date.getTime() > 10*60000) {
+            var timeDelayed = lastTime.getTime()-item.date.getTime();
+
+            errors.push({item: item, lasttime: lastTime, delayedMinutes: timeDelayed/60000});
+          }
+        }
+        lastTime = item.date;
+        callback();
+      }, function(err) {
+        //Done..
+        if (err)
+          res.send("Err:"+err)
+        res.send({ count: errors.length, errors: errors});
+      })
+    })
+  }
 app.get("/measures", indexMeasures);
 app.get("/measures/:deviceid", singleMeasure);
 app.get("/measures/:deviceid/analyze", analyzeMeasure);
+app.get("/measures/:deviceid/analyze/:since", analyzeMeasureSince); //since x days
 
 }
 
