@@ -13,6 +13,7 @@ module.exports = function(app) {
         console.log("Finding all measures");
         cb(measures);
       }
+      console.log(err);
       cb(null);
     });
   }
@@ -29,6 +30,7 @@ module.exports = function(app) {
             console.log("Encontradas "+measures.length+" mueasures del id "+deviceid);
             cb(measures);
           } else {
+            console.log(err);
             cb(null);
           }
       });
@@ -51,6 +53,7 @@ module.exports = function(app) {
             console.log("Encontradas "+measures.length+" mueasures del id "+deviceid);
             cb(measures);
           } else {
+            console.log(err);
             cb(null);
           }
       });
