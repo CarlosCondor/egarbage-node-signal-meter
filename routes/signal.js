@@ -111,7 +111,7 @@ module.exports = function(app) {
   }
   
   analyzeMeasureSince = function(req, res) {
-    findByDeviceDate(parseInt(req.params.deviceid), new Date(new Date().getTime()-req.params.since*24*60*60000), function(measures) {
+    findByDeviceDate(parseInt(req.params.deviceid), new Date(new Date().getTime()-parseInt(req.params.since)*24*60*60000), function(measures) {
       if (!measures) {
         res.send("Error al recibir medidas");
         //return;
