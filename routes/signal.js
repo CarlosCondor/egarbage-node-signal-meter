@@ -23,7 +23,7 @@ module.exports = function(app) {
     if (typeof(deviceid)=='number') {
           
       var query = Measure.find({id_device: deviceid})
-                          .select("id_device date -_id")
+                          .select("-_id")
                           .sort({date: -1})
                           .exec(function(err, measures) {
           if (!err) {
@@ -46,7 +46,7 @@ module.exports = function(app) {
     if (typeof(deviceid)=='number' && date instanceof Date) {
       var query = Measure.find({id_device: deviceid})
                         .gte('date', date)
-                        .select("id_device date -_id")
+                        .select("-_id")
                         .sort({date: -1})
                         .exec(function(err, measures) {
           if (!err) {
