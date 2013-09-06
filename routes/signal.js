@@ -21,18 +21,7 @@ module.exports = function(app) {
 
   var Measure = require('../models/measure');
 
-      
-  indexMeasures = function(req, res) {
-    findAllMeasures(function(measures) {
-      // Here is the measures
-      if (measures)
-        res.send("Here is a total of "+measures.length+" measures");
-      else
-        res.send("Error al recibir medidas");
-    });
-  }
-
-
+  // compare <measure> dates to find errors
   var findMeasureErrors = function(measures, callback) {
     var lastTime = null;
     var errors = [];
@@ -56,16 +45,13 @@ module.exports = function(app) {
     });
   }
 
-  var analyzeMeasures = function(param1, param2, param3) {
-    console.log(param1,param2,param3);
+  // query measures by device_id and since date
+  var getMeasures = function(param1, param2, param3) {
     var target, since, callback = null;
     var target = param1;
     if (param3) callback = param3;
     if (param3) since = param2;
     if (!param3) callback = param2;
-
-    console.log(target,since,callback);
-
 
     var query = Measure.find({id_device: target})
     if (since) query.gte('date', since)
@@ -78,19 +64,19 @@ module.exports = function(app) {
   }
 
   viewAnalyzeSingleMeasure = function(req, res) {
-    console.log(req.params);
     if (req.params.deviceid && req.params.since) {
+            
       var split_date = req.params.since.split("-");
-      var format_date = "{0}-{1}-{2}".format(split_date[1],split_date[0],split_date[2]);
-      console.log("Find since "+ new Date(format_date));
-      analyzeMeasures(parseInt(req.params.deviceid), new Date(req.params.since), function(measures) {
+      var format_date = "{0}-{1}-{2}".format(split_date[1],split_date[0],split_date[2]);  
+      
+      console.log(new Date(format_date));
+      getMeasures(parseInt(req.params.deviceid), new Date(format_date), function(measures) {
         findMeasureErrors(measures, function(errors) {
           res.send(errors);
         });
       });
     } else {
-      console.log("No since");
-      analyzeMeasures(parseInt(req.params.deviceid), function(measures) {
+      getMeasures(parseInt(req.params.deviceid), function(measures) {
         findMeasureErrors(measures, function(errors) {
           res.send(errors);
         });
@@ -98,7 +84,6 @@ module.exports = function(app) {
     }
   }
 
-app.get("/measures", indexMeasures);
 app.get("/measures/:deviceid", viewAnalyzeSingleMeasure);
 app.get("/measures/:deviceid/:since", viewAnalyzeSingleMeasure);
 
