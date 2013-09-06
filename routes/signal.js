@@ -3,66 +3,24 @@
 var async = require('async');
 
 module.exports = function(app) {
-  
+
+  /*
+  *   format function. "{0}{1}".format("uno","dos");
+  */
+  if (!String.prototype.format) {
+    String.prototype.format = function() {
+      var args = arguments;
+      return this.replace(/{(\d+)}/g, function(match, number) { 
+        return typeof args[number] != 'undefined'
+          ? args[number]
+          : match
+        ;
+      });
+    };
+  }
 
   var Measure = require('../models/measure');
 
-  var findAllMeasures = function(cb) {
-    Measure.find(function(err, measures) {
-      if (!err) {
-        console.log("Finding all measures");
-        cb(measures);
-      }
-      console.log(err);
-      cb(null);
-    });
-  }
-
-  var findByDevice = function(deviceid, cb) {
-    
-    if (typeof(deviceid)=='number') {
-          
-      var query = Measure.find({id_device: deviceid})
-                          .select("date id_device")
-                          .sort({date: -1})
-                          .exec(function(err, measures) {
-          if (!err) {
-            console.log("Encontradas "+measures.length+" mueasures del id "+deviceid);
-            cb(measures);
-          } else {
-            console.log(err);
-            cb(null);
-          }
-      });
-
-    } else {
-      console.log("device id is not integer,  is "+typeof(deviceid));
-      return cb(null);
-    }
-  }
-
-  var findByDeviceDate = function(deviceid, date, cb) {
-    
-    if (typeof(deviceid)=='number' && date instanceof Date) {
-      var query = Measure.find({id_device: deviceid})
-                        .gte('date', date)
-                        .select("-_id")
-                        .sort({date: -1})
-                        .exec(function(err, measures) {
-          if (!err) {
-            console.log("Encontradas "+measures.length+" mueasures del id "+deviceid);
-            cb(measures);
-          } else {
-            console.log(err);
-            cb(null);
-          }
-      });
-
-    } else {
-      console.log("device id is not integer,  is "+typeof(deviceid));
-      return cb(null);
-    }
-  }
       
   indexMeasures = function(req, res) {
     findAllMeasures(function(measures) {
@@ -74,79 +32,75 @@ module.exports = function(app) {
     });
   }
 
-  singleMeasure = function(req, res) {
-    findByDevice(parseInt(req.params.deviceid), function(measures) {
-      if (measures)
-        res.send(measures);
+
+  var findMeasureErrors = function(measures, callback) {
+    var lastTime = null;
+    var errors = [];
+    // Need to split by device_id and then compare
+    async.forEach(measures, function(item, callback) {
+      if (!lastTime) {
+        lasttime = item.date;
+      } else {
+        if (lastTime.getTime() - item.date.getTime() > 10*60000) {
+          var timeDelayed = lastTime.getTime()-item.date.getTime();
+          errors.push({item: item, lasttime: lastTime, delayedMinutes: timeDelayed/60000});
+        }
+      }
+      lastTime = item.date;
+      callback();
+    }, function(err) {
+      if (err)
+        throw err
       else
-        res.send("Error al recibir medidas");
-    })
+        callback({count: errors.length, errors: errors});
+    });
   }
 
-  analyzeMeasure = function(req, res) {
-    findByDevice(parseInt(req.params.deviceid), function(measures) {
-      if (!measures) {
-        res.send("Error al recibir medidas, no hay measures");
-        return;
-      }
-      var lastTime = null;
-      var errors = [];
-      async.forEach(measures, function(item, callback) {
-        if (!lastTime) {
-          lastTime = item.date;
-        } else {
-          // check if date is +10minutes from lastTime
-          if (lastTime.getTime()-item.date.getTime() > 10*60000) {
-            var timeDelayed = lastTime.getTime()-item.date.getTime();
+  var analyzeMeasures = function(param1, param2, param3) {
+    console.log(param1,param2,param3);
+    var target, since, callback = null;
+    var target = param1;
+    if (param3) callback = param3;
+    if (param3) since = param2;
+    if (!param3) callback = param2;
 
-            errors.push({item: item, lasttime: lastTime, delayedMinutes: timeDelayed/60000});
-          }
-        }
-        lastTime = item.date;
-        callback();
-      }, function(err) {
-        //Done..
-        if (err)
-          res.send("Err:"+err)
-        res.send({ count: errors.length, errors: errors});
-      })
-    })
+    console.log(target,since,callback);
+
+
+    var query = Measure.find({id_device: target})
+    if (since) query.gte('date', since)
+    query.select('-_id')
+      .sort({date: -1})
+      .exec(function(err, measures) {
+        if (!err) { callback(measures); }
+        else { throw err; callback(null); }
+      });
   }
-  
-  analyzeMeasureSince = function(req, res) {
-    findByDeviceDate(parseInt(req.params.deviceid), new Date(new Date().getTime()-parseInt(req.params.since)*24*60*60000), function(measures) {
-      if (!measures) {
-        res.send("Error al recibir medidas");
-        //return;
-      }
 
-      var lastTime = null;
-      var errors = [];
-      async.forEach(measures, function(item, callback) {
-        if (!lastTime) {
-          lastTime = item.date;
-        } else {
-          // check if date is +10minutes from lastTime
-          if (lastTime.getTime()-item.date.getTime() > 10*60000) {
-            var timeDelayed = lastTime.getTime()-item.date.getTime();
-
-            errors.push({item: item, lasttime: lastTime, delayedMinutes: timeDelayed/60000});
-          }
-        }
-        lastTime = item.date;
-        callback();
-      }, function(err) {
-        //Done..
-        if (err)
-          res.send("Err:"+err)
-        res.send({ count: errors.length, errors: errors});
-      })
-    })
+  viewAnalyzeSingleMeasure = function(req, res) {
+    console.log(req.params);
+    if (req.params.deviceid && req.params.since) {
+      var split_date = req.params.since.split("-");
+      var format_date = "{0}-{1}-{2}".format(split_date[1],split_date[0],split_date[2]);
+      console.log("Find since "+ new Date(format_date));
+      analyzeMeasures(parseInt(req.params.deviceid), new Date(req.params.since), function(measures) {
+        findMeasureErrors(measures, function(errors) {
+          res.send(errors);
+        });
+      });
+    } else {
+      console.log("No since");
+      analyzeMeasures(parseInt(req.params.deviceid), function(measures) {
+        findMeasureErrors(measures, function(errors) {
+          res.send(errors);
+        });
+      });
+    }
   }
+
 app.get("/measures", indexMeasures);
-app.get("/measures/:deviceid", singleMeasure);
-app.get("/measures/:deviceid/analyze", analyzeMeasure);
-app.get("/measures/:deviceid/analyze/:since", analyzeMeasureSince); //since x days
+app.get("/measures/:deviceid", viewAnalyzeSingleMeasure);
+app.get("/measures/:deviceid/:since", viewAnalyzeSingleMeasure);
 
 }
 
