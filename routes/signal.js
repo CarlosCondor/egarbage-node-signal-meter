@@ -30,8 +30,8 @@ module.exports = function(app) {
       if (!lastTime) {
         lasttime = item.date;
       } else {
-        if (lastTime.getTime() - item.date.getTime() > 10*60000) {
-          var timeDelayed = lastTime.getTime()-item.date.getTime();
+        if (item.date.getTime() - lastTime.getTime() > 10*60000) {
+          var timeDelayed = item.date.getTime() - lastTime.getTime();
           errors.push({item: item, lasttime: lastTime, delayedMinutes: timeDelayed/60000});
         }
       }
@@ -56,7 +56,7 @@ module.exports = function(app) {
     var query = Measure.find({id_device: target})
     if (since) query.gte('date', since)
     query.select('-_id')
-      .sort({date: -1})
+      //.sort({date: -1})
       .exec(function(err, measures) {
         if (!err) { callback(measures); }
         else { throw err; callback(null); }
