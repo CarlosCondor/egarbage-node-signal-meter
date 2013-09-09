@@ -34,6 +34,8 @@ module.exports = function(app) {
           var timeDelayed = item.date.getTime() - lastTime.getTime();
           var objItem = item.toObject();
           objItem.lastSync = lastTime;
+          delete objItem['__v'];
+          delete objItem['_id'];
           objItem.delayedMinutes = timeDelayed/60000;
           errors.push(objItem); 
         }
