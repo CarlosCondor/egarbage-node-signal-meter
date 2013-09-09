@@ -27,18 +27,28 @@ module.exports = function(app) {
     var errors = [];
     // Need to split by device_id and then compare
     async.forEach(measures, function(item, callback) {
-      if (!lastTime) {
-        lasttime = item.date;
+      if (item == measures[measures.length-1]) {
+        var objItem = item.toObject();
+        delete objItem['__v'];
+        delete objItem['_id'];
+        objItem.lastSync = lastTime.toUTCString();
+        objItem.date = objItem.date.toUTCString();
+        objItem.delayedMinutes = ((new Date()).getTime() - lastTime.getTime()) / 60000;
+        error.push();
       } else {
-        if (item.date.getTime() - lastTime.getTime() > 10*60000) {
-          var timeDelayed = item.date.getTime() - lastTime.getTime();
-          var objItem = item.toObject();
-          objItem.lastSync = lastTime.toUTCString();
-          objItem.date = objItem.date.toUTCString();
-          delete objItem['__v'];
-          delete objItem['_id'];
-          objItem.delayedMinutes = timeDelayed/60000;
-          errors.push(objItem); 
+        if (!lastTime) {
+          lasttime = item.date;
+        } else {
+          if (item.date.getTime() - lastTime.getTime() > 10*60000) {
+            var timeDelayed = item.date.getTime() - lastTime.getTime();
+            var objItem = item.toObject();
+            objItem.lastSync = lastTime.toUTCString();
+            objItem.date = objItem.date.toUTCString();
+            delete objItem['__v'];
+            delete objItem['_id'];
+            objItem.delayedMinutes = timeDelayed/60000;
+            errors.push(objItem); 
+          }
         }
       }
       lastTime = item.date;
