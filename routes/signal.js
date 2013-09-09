@@ -27,7 +27,8 @@ module.exports = function(app) {
     var errors = [];
     // Need to split by device_id and then compare
     async.forEach(measures, function(item, callback) {
-      if (item == measures[measures.length-1]) {
+      if (item._id == measures[measures.length-1]._id) {
+        console.log("Last measure..");
         if ((new Date()).getTime() - lastTime.getTime() > 10*60000) {
           var objItem = item.toObject();
           delete objItem['__v'];
