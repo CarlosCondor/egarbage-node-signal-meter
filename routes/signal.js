@@ -28,13 +28,15 @@ module.exports = function(app) {
     // Need to split by device_id and then compare
     async.forEach(measures, function(item, callback) {
       if (item == measures[measures.length-1]) {
-        var objItem = item.toObject();
-        delete objItem['__v'];
-        delete objItem['_id'];
-        objItem.lastSync = lastTime.toUTCString();
-        objItem.date = objItem.date.toUTCString();
-        objItem.delayedMinutes = ((new Date()).getTime() - lastTime.getTime()) / 60000;
-        error.push();
+        if ((new Date()).getTime() - lastTime.getTime() > 10*60000) {
+          var objItem = item.toObject();
+          delete objItem['__v'];
+          delete objItem['_id'];
+          objItem.lastSync = lastTime.toUTCString();
+          objItem.date = objItem.date.toUTCString();
+          objItem.delayedMinutes = ((new Date()).getTime() - lastTime.getTime()) / 60000;
+          error.push();
+        }
       } else {
         if (!lastTime) {
           lasttime = item.date;
