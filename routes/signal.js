@@ -35,7 +35,7 @@ module.exports = function(app) {
           objItem.lastSync = lastTime.toUTCString();
           objItem.date = objItem.date.toUTCString();
           objItem.delayedMinutes = ((new Date()).getTime() - lastTime.getTime()) / 60000;
-          error.push();
+          errors.push();
         }
       } else {
         if (!lastTime) {
