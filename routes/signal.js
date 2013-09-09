@@ -33,7 +33,8 @@ module.exports = function(app) {
         if (item.date.getTime() - lastTime.getTime() > 10*60000) {
           var timeDelayed = item.date.getTime() - lastTime.getTime();
           var objItem = item.toObject();
-          objItem.lastSync = lastTime;
+          objItem.lastSync = lastTime.toUTCString();
+          objItem.date = objItem.date.toUTCString();
           delete objItem['__v'];
           delete objItem['_id'];
           objItem.delayedMinutes = timeDelayed/60000;
