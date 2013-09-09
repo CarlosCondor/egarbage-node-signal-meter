@@ -32,7 +32,10 @@ module.exports = function(app) {
       } else {
         if (item.date.getTime() - lastTime.getTime() > 10*60000) {
           var timeDelayed = item.date.getTime() - lastTime.getTime();
-          errors.push({item: item, lasttime: lastTime, delayedMinutes: timeDelayed/60000});
+          var objItem = item.toObject();
+          objItem.lastSync = lastTime;
+          objItem.delayedMinutes = timeDelayed/60000;
+          errors.push(objItem); 
         }
       }
       lastTime = item.date;
