@@ -39,6 +39,7 @@ module.exports = function(app) {
           errors.push();
         }
       } else {
+        console.log("No lastTme");
         if (!lastTime) {
           lasttime = item.date;
         } else {
