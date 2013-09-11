@@ -27,40 +27,38 @@ module.exports = function(app) {
     var errors = [];
     // Need to split by device_id and then compare
     async.forEach(measures, function(item, callback) {
-      if (item._id == measures[measures.length-1]._id) {
-        if ((new Date()).getTime() - lastTime.getTime() > 10*60000) {
-          var objItem = item.toObject();
-          delete objItem['__v'];
-          delete objItem['_id'];
-          objItem.lastSync = lastTime.toUTCString();
-          objItem.date = objItem.date.toUTCString();
-          objItem.delayedMinutes = ((new Date()).getTime() - lastTime.getTime()) / 60000;
-          errors.push(objItem);
-        }
-      } else {
-        if (!lastTime) {
-          lasttime = item.date;
-        } else {
-          if (item.date.getTime() - lastTime.getTime() > 10*60000) {
-            var timeDelayed = item.date.getTime() - lastTime.getTime();
-            var objItem = item.toObject();
-            objItem.lastSync = lastTime.toUTCString();
-            objItem.date = objItem.date.toUTCString();
-            delete objItem['__v'];
-            delete objItem['_id'];
-            objItem.delayedMinutes = timeDelayed/60000;
-            errors.push(objItem); 
-          }
-        }
+      
+      if (lastTime && item.date.getTime() - lastTime.getTime() > 10*60000) {
+        var timeDelayed = item.date.getTime() - lastTime.getTime();
+        var objItem = item.toObject();
+        objItem.lastSync = lastTime.toUTCString();
+        objItem.date = objItem.date.toUTCString();
+        delete objItem['__v'];
+        delete objItem['_id'];
+        objItem.delayedMinutes = timeDelayed/60000;
+        errors.push(objItem); 
       }
+      
       lastTime = item.date;
       callback();
     }, function(err) {
-      if (err)
-        throw err
-      else
-        callback({count: errors.length, errors: errors});
-    });
+      if (err) throw err;
+      else {
+        // Check if last measure is desynchronized
+        var lastItem = measures[measures.length-1];
+        if ((new Date()).getTime() - lastItem.date.getTime() > 10* 60*1000 ) {
+          var timeDelayed = (new Date()).getTime() - lastItem.date.getTime();
+          var objItem = lastItem.toObject();
+          objItem.lastSync = lastItem.date.toUTCString();
+          objItem.date = "Now";
+          delete objItem['__v'];
+          delete objItem['_id'];
+          objItem.delayedMinutes = timeDelayed/60000;
+          errors.push(objItem); 
+        }
+        callback({count: errors.length, errors: errors});        
+      }
+    }); 
   }
 
   // query measures by device_id and since date
@@ -102,8 +100,8 @@ module.exports = function(app) {
     }
   }
 
-app.get("/measures/:deviceid", viewAnalyzeSingleMeasure);
-app.get("/measures/:deviceid/:since", viewAnalyzeSingleMeasure);
+  app.get("/measures/:deviceid", viewAnalyzeSingleMeasure);
+  app.get("/measures/:deviceid/:since", viewAnalyzeSingleMeasure);
 
 }
 
